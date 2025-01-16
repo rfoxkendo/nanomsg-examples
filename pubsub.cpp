@@ -118,4 +118,6 @@ int main(int argc, char** argv) {
         nn_close(socket),
         "Failed to close publisher socket."
     );
+
+    return EXIT_SUCCESS;
 }
