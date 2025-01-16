@@ -9,3 +9,5 @@ Note, Lessonl learned for running in a container inside a WSL instance...
 * pushpull - sets up a push/pull land sends/receives a message
 * reqrep - Request/reply example
 * pair - Pair pattern example.
+* pubsub - demonstrates the publisher/subscriber pattern.
+* surveyrespond - demonstrates the survey respond pattern.
