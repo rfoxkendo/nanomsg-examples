@@ -1,4 +1,4 @@
-PROGRAMS=pushpull reqrep pair
+PROGRAMS=pushpull reqrep pair pubsub
 CXXFLAGS=-lnanomsg -g -O0
 all: $(PROGRAMS)
 
@@ -10,6 +10,9 @@ reqrep: reqrep.cpp
 	$(CXX) -o $@ $^ $(CXXFLAGS)
 
 pair: pair.cpp
+	$(CXX) -o $@ $^ $(CXXFLAGS)
+
+pubsub: pubsub.cpp
 	$(CXX) -o $@ $^ $(CXXFLAGS)
 clean:
 	rm -f $(PROGRAMS)
