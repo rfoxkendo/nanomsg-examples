@@ -1,4 +1,4 @@
-PROGRAMS=pushpull reqrep pair pubsub surveyrespond
+PROGRAMS=pushpull reqrep pair pubsub surveyrespond bus
 CXXFLAGS=-lnanomsg -g -O0
 all: $(PROGRAMS)
 
@@ -17,6 +17,9 @@ pubsub: pubsub.cpp
 
 
 surveyrespond: surveyrespond.cpp
+	$(CXX) -o $@ $^ $(CXXFLAGS)
+
+bus: bus.cpp
 	$(CXX) -o $@ $^ $(CXXFLAGS)
 
 clean:
