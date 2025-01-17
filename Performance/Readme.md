@@ -21,3 +21,19 @@ timed as well.  Be sure that nmsg is large enough that will be timing noise.
 
 pipelinetimings.sh - is a script that will accumulate a pile of timings for each transport thpe.
 the output is sent to pipelineTimings.log
+
+### REQ/REP timings
+
+Usage:
+```
+./reqrep uri nmsg msgsize
+```
+
+* uri - uri that is the tranport endpoint.
+* nmsg - number of REQ/REP pairs.
+* msgsize - size of the large message in a REQ/REP transaction.
+
+The program times requests that are msgsize with one byte replies as well as requests that are one
+byte with replies that are msgsize.
+
+reqreptimings.sh - is a script that will timing for a numbger of values. Output is written to reqreptimings.log
