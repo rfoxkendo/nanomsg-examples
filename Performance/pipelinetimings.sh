@@ -8,7 +8,7 @@ do
     do
         for pullers in 1 2 3 4 5
         do
-            echo size $size puller $pullers >> pipelineTimings.log 
+            echo =====  size $size puller $pullers >> pipelineTimings.log 
             ./pipeline $uri 100000 $size $pullers  >> pipelineTimings.log 
         done
     done
