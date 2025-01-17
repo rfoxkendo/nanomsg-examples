@@ -20,4 +20,4 @@ Usage for this is ```bus base-url bus size``` where:
     
 ### Performance measurement apps.
 
-See [Performance mesurement](Performance/Readme.md)
+See [Performance measurement](Performance/Readme.md)
