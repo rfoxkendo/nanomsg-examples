@@ -1,4 +1,4 @@
-Nanomessage examples
+## Nanomessage examples
 
 Note, unless otherwise specified, the programs taka a single parameter,
 the URI for the communication endpoint.  
@@ -18,3 +18,6 @@ Usage for this is ```bus base-url bus size``` where:
     *  size - is a number >1 which is the number of bus members.
 
     
+### Performance measurement apps.
+
+See [Performance mesurement](Performance/Readme.md)
