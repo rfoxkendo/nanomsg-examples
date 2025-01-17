@@ -13,12 +13,10 @@
  *    * msgsize - is the size of each message.
  *    * mreceivers - Is the number of receivers.
  * 
- * Each receiver is a thread.  It sends nmsg msgsize messages and then
- * whose first byte is zero.  It then sends nreceivers messages that are a byte of 1
- * The receivers shutdown and exist when they get that message.  Fair distribution
- * Should ensure that this shuts down the program. 
- */
-
+ * Each receiver is a thread.  Because of the way messages are distributed
+ * to each puller we can't reliably do the terminate message game.
+ * See pullThread.
+*/
 #include <thread>
 #include <nanomsg/nn.h>
 #include <nanomsg/pipeline.h>
@@ -48,12 +46,18 @@ checkstat(int status, const char* msg) {
  * pull thread:
  * 
  * @param uri - string that containst he URI of the pusher.
- * @param ready - reference to a latch that is decremented by us when we are
+ * @param nmsg - The base number of messages - once we see a messages
+ *    with a sequence bigger than this we're done.
+ * @param ready - pointer to a latch that is decremented by us when we are
  * ready to recieve data.  The pusher waits for all pullers to be ready
  * before actually starting to time and send messages.
+ * @param finished - pointer to a latch we arrive at when we're done
+ *     getting messages and have shut down our socket.  The pusher
+ *     sends messages until wait_for on finished is true.
+ * 
  */
 static void
-pullThread(std::string uri, std::latch* ready) {
+pullThread(std::string uri, size_t nmsg, std::latch* ready,  std::latch* finished) {
     int socket = checkstat(
         nn_socket(AF_SP, NN_PULL),
         "Puller failed to open socket"
@@ -63,7 +67,7 @@ pullThread(std::string uri, std::latch* ready) {
         "Puller failed to connect to pusher."
     );
     
-    char* msgBuf;
+    uint32_t* msgBuf;
     bool done(false);
     ready->count_down();     // This thread is ready...
 
@@ -75,35 +79,36 @@ pullThread(std::string uri, std::latch* ready) {
             nn_recv(socket, &msgBuf, NN_MSG, 0),
             "Failed to  pull a message"
         );
-        done = *msgBuf == 1;                // Got a done message.
+        done = msgBuf[0] >= nmsg;
         nn_freemsg(msgBuf);
     }
 
+    
+    finished->arrive_and_wait();     // Otherwise pushes hang >sigh<
     checkstat(nn_shutdown(socket, endpoint), "Puller failed shutdown");
     checkstat(nn_close(socket), "Puller failed close");
 }
-/// Pushes the messages once all is set up>
-static void 
-pusher(int socket, size_t nmsg, size_t msgSize, int npullers) {
+/// Pushes the messages once all is set up
+// Returns the number of messages sent before everyone was doe.
+static size_t  
+pusher(int socket, size_t msgSize,  std::latch& done) {
     char* msg = new char[msgSize];     // Use the same message buffer.
-    msg[0] = 0;                        // Not a terminate msg.
-
-    for (int i = 0; i < nmsg; i++ ) {
-        checkstat(
-            nn_send(socket, msg, msgSize, 0),
-            "Failed to push a message."
-        );
+    uint32_t* seq = reinterpret_cast<uint32_t*>(msg);
+    *seq = 0;
+    size_t result(0);
+    while(! done.try_wait()) {
+        int stat =  nn_send(socket, msg, msgSize, NN_DONTWAIT);
+        if (stat > 0) {    
+            *seq += 1;               // Only count what we can send.
+            result++;
+        } else if (nn_errno() != EAGAIN) {
+            checkstat(stat, "Pusher failed to send message");
+        }
+        // else just blocked.
     }
-
-    // Send the tiny termination messagess:
-
-    msg[0] = 1;
-    for (int i =0; i < npullers; i++ ) {
-        checkstat(
-            nn_send(socket, msg, 1, 0),
-            "Failed to push a termination message."
-        );
-    }
+    delete []msg;
+    return result;
+    
 }
 // entry point
 
@@ -128,10 +133,11 @@ int main(int argc, char** argv) {
     );
 
     std::latch allready(nreceivers);    // So we know when all the receivers are ready to go.
-
+    std::latch alldone(nreceivers);     // So we know when to join.
     std::vector<std::thread*> receivers;
+
     for (int i =0; i < nreceivers; i++) {
-        receivers.push_back(new std::thread(pullThread, uri, &allready));
+        receivers.push_back(new std::thread(pullThread, uri, nmsg, &allready, &alldone));
     }
 
     // Wait for the to all startt:
@@ -140,7 +146,7 @@ int main(int argc, char** argv) {
 
     ///////////////////////////////////// timed
     auto start = std::chrono::high_resolution_clock::now();
-    pusher(socket, nmsg, msgsize, nreceivers);
+    nmsg = pusher(socket, msgsize, alldone);            // Actual number of messagse.
     // Join the threads so we know they're done
 
     for (auto p : receivers) {
