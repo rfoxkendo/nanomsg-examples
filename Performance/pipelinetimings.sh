@@ -1,7 +1,7 @@
 #!/bin/bash
 
 echo "" >pipelineTimings.log    # new file.
-for uri in tcp://127.0.0.1:3000 ipc:///tmp/pipeline ipc:///pipeline
+for uri in tcp://127.0.0.1:3000 ipc:///tmp/pipeline inproc:///pipeline
 do
     echo "---- $uri timings ----" >> pipelineTimings.log 
     for size in 1024 2048 4096 8192 16384 32768 65536 131072 262144 524288 1048576
